@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import API_URL from "./api"; // 👈 importamos la URL desde api.js
 
 function App() {
   const [urls, setUrls] = useState("");
@@ -7,15 +8,20 @@ function App() {
 
   // Verificar si el backend está vivo
   useEffect(() => {
-    fetch("https://latinotype-backend.onrender.com")
-      .then((res) => res.json())
-      .then(() => setStatus("up"))
+    fetch(API_URL)
+      .then((res) => {
+        if (res.ok) {
+          setStatus("up");
+        } else {
+          setStatus("down");
+        }
+      })
       .catch(() => setStatus("down"));
   }, []);
 
   const handleScan = async () => {
     try {
-      const response = await fetch("https://latinotype-backend.onrender.com/scan", {
+      const response = await fetch(`${API_URL}/scan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ urls: urls.split("\n") }),
@@ -25,118 +31,74 @@ function App() {
       setResults(data.results || []);
     } catch (error) {
       console.error("Error:", error);
+      setStatus("down");
     }
   };
 
-  const handleClear = () => {
-    setUrls("");
-    setResults([]);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center py-10 transition-colors">
-      <div className="w-full max-w-5xl p-6 bg-white dark:bg-gray-800 shadow-xl rounded-2xl">
-        <h1 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
-          Latinotype Scanner
-        </h1>
+    <div className="p-6 text-center">
+      <h1 className="text-3xl font-bold mb-4">Latinotype Scanner</h1>
+      <p className="mb-4">
+        Estado del servidor:{" "}
+        {status === "up" ? "🟢 Activo" : status === "down" ? "🔴 Caído" : "⏳ Verificando..."}
+      </p>
 
-        {/* Estado del servidor */}
-        <p className="text-center mb-6 text-gray-700 dark:text-gray-300">
-          Estado del servidor:{" "}
-          {status === "checking" && "⏳ Comprobando..."}
-          {status === "up" && (
-            <span className="text-green-600 font-semibold">🟢 Activo</span>
-          )}
-          {status === "down" && (
-            <span className="text-red-600 font-semibold">🔴 Caído</span>
-          )}
-        </p>
+      <textarea
+        className="border p-2 w-full mb-4"
+        rows="3"
+        placeholder="Ingresa una o varias URLs (una por línea)"
+        value={urls}
+        onChange={(e) => setUrls(e.target.value)}
+      ></textarea>
 
-        {/* Formulario */}
-        <textarea
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 mb-4 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-          rows="3"
-          placeholder="Escribe una o varias URLs (una por línea)"
-          value={urls}
-          onChange={(e) => setUrls(e.target.value)}
-        />
-        <div className="flex justify-center gap-4 mb-6">
-          <button
-            onClick={handleScan}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow-md transition"
-          >
-            🚀 Escanear
-          </button>
-          <button
-            onClick={handleClear}
-            className="bg-gray-400 hover:bg-gray-500 text-black px-5 py-2 rounded-lg shadow-md transition"
-          >
-            🧹 Limpiar
-          </button>
-        </div>
-
-        {/* Resultados */}
-        {results.length > 0 && (
-          <div className="mt-6 w-full overflow-hidden rounded-2xl shadow bg-white dark:bg-gray-700 border dark:border-gray-600">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
-                <tr>
-                  <th className="px-6 py-3 font-medium">URL</th>
-                  <th className="px-6 py-3 font-medium">Fuentes Detectadas</th>
-                  <th className="px-6 py-3 font-medium">Latinotype</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((r, idx) => (
-                  <tr
-                    key={idx}
-                    className="border-t dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-                  >
-                    {/* URL */}
-                    <td className="px-6 py-4 text-blue-600 underline">
-                      <a href={r.url} target="_blank" rel="noreferrer">
-                        {r.url}
-                      </a>
-                    </td>
-
-                    {/* Fuentes Detectadas */}
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        {r.fuentesDetectadas.map((f, i) => (
-                          <span
-                            key={i}
-                            className="bg-gray-200 dark:bg-gray-500 hover:bg-gray-50 dark:hover:bg-gray-400 px-3 py-1 rounded-full text-xs shadow-sm transition"
-                          >
-                            {f}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-
-                    {/* Latinotype */}
-                    <td className="px-6 py-4">
-                      {r.latinotype !== "Ninguna" ? (
-                        <span className="bg-green-200 dark:bg-green-600 hover:bg-green-100 dark:hover:bg-green-500 text-green-800 dark:text-green-100 px-3 py-1 rounded-full text-xs font-medium shadow-sm transition">
-                          {r.latinotype}
-                        </span>
-                      ) : (
-                        <span className="text-gray-500 dark:text-gray-300 italic">
-                          Ninguna
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Footer */}
-        <footer className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400 italic">
-          © {new Date().getFullYear()} Latinotype Scanner
-        </footer>
+      <div className="space-x-2 mb-6">
+        <button
+          onClick={handleScan}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          🚀 Escanear
+        </button>
+        <button
+          onClick={() => {
+            setUrls("");
+            setResults([]);
+          }}
+          className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+        >
+          🧹 Limpiar
+        </button>
       </div>
+
+      <div>
+        {results.length > 0 && (
+          <table className="w-full border-collapse border border-gray-300">
+            <thead>
+              <tr>
+                <th className="border p-2">URL</th>
+                <th className="border p-2">Fuentes Detectadas</th>
+                <th className="border p-2">Latinotype</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((r, i) => (
+                <tr key={i}>
+                  <td className="border p-2 text-blue-600 underline">
+                    <a href={r.url} target="_blank" rel="noreferrer">
+                      {r.url}
+                    </a>
+                  </td>
+                  <td className="border p-2">{r.fuentesDetectadas.join(", ")}</td>
+                  <td className="border p-2">{r.latinotype}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <footer className="mt-8 text-sm text-gray-600">
+        © 2025 Latinotype Scanner
+      </footer>
     </div>
   );
 }
