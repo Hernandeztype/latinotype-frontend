@@ -9,24 +9,24 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // 🔹 Healthcheck correcto usando /health
-  useEffect(() => {
-    const checkBackend = async () => {
-      try {
-        const res = await fetch(`${API_URL}/health`);
-        const data = await res.json();
-        if (data.status === "ok") {
-          setStatus("up");
-        } else {
-          setStatus("down");
-        }
-      } catch (err) {
-        console.error("Healthcheck error:", err);
+  // 🔹 Verifica /health en vez de la raíz
+  const checkBackend = async () => {
+    try {
+      const res = await fetch(`${API_URL}/health`);
+      if (res.ok) {
+        setStatus("up");
+      } else {
         setStatus("down");
       }
-    };
+    } catch (err) {
+      setStatus("down");
+    }
+  };
 
+  useEffect(() => {
     checkBackend();
+    const interval = setInterval(checkBackend, 30000); // revisa cada 30s
+    return () => clearInterval(interval);
   }, []);
 
   const handleScan = async () => {
@@ -124,33 +124,7 @@ function App() {
                 loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    ></path>
-                  </svg>
-                  Escaneando...
-                </span>
-              ) : (
-                "🚀 Escanear"
-              )}
+              {loading ? "Escaneando..." : "🚀 Escanear"}
             </button>
 
             <button
@@ -243,13 +217,8 @@ function App() {
               <h2 className="text-lg font-semibold mb-3">📜 Historial de escaneos</h2>
               <ul className="space-y-3">
                 {history.map((h, idx) => (
-                  <li
-                    key={idx}
-                    className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 shadow"
-                  >
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                      {h.time}
-                    </p>
+                  <li key={idx} className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 shadow">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{h.time}</p>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-sm">
                         <thead className="bg-gray-200 dark:bg-gray-600">
