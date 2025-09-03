@@ -9,10 +9,24 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // 🔹 Healthcheck correcto usando /health
   useEffect(() => {
-    fetch(API_URL)
-      .then((res) => setStatus(res.ok ? "up" : "down"))
-      .catch(() => setStatus("down"));
+    const checkBackend = async () => {
+      try {
+        const res = await fetch(`${API_URL}/health`);
+        const data = await res.json();
+        if (data.status === "ok") {
+          setStatus("up");
+        } else {
+          setStatus("down");
+        }
+      } catch (err) {
+        console.error("Healthcheck error:", err);
+        setStatus("down");
+      }
+    };
+
+    checkBackend();
   }, []);
 
   const handleScan = async () => {
