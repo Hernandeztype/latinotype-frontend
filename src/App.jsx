@@ -4,7 +4,7 @@ import API_URL from "./api";
 function App() {
   const [urls, setUrls] = useState("");
   const [results, setResults] = useState([]);
-  const [history, setHistory] = useState([]); // ✅ historial agregado
+  const [history, setHistory] = useState([]);
   const [status, setStatus] = useState("checking");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,10 +29,9 @@ function App() {
       if (!response.ok) throw new Error("Error en el backend");
 
       const data = await response.json();
-      setResults(data.results || []);
-
-      // ✅ Guardar en historial
       const timestamp = new Date().toLocaleString();
+
+      setResults(data.results || []);
       setHistory((prev) => [
         { time: timestamp, results: data.results || [] },
         ...prev,
@@ -46,19 +45,19 @@ function App() {
     }
   };
 
-  // ✅ Función para renderizar chips de fuentes o latinotype
-  const renderTags = (items, color = "gray") =>
-    items
-      .map((i) => i.trim())
-      .filter((i) => i.length > 0)
-      .map((i, idx) => (
-        <span
-          key={idx}
-          className={`px-3 py-1 text-xs rounded-full bg-${color}-200 dark:bg-${color}-600 text-${color}-900 dark:text-${color}-100`}
-        >
-          {i}
-        </span>
-      ));
+  // 📂 Exportar historial completo a CSV
+  const exportToCSV = () => {
+    const rows = history.flatMap((h) =>
+      h.results.map((r) => [h.time, r.url, r.fuentesDetectadas.join(", "), r.latinotype])
+    );
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      ["Fecha,URL,Fuentes Detectadas,Latinotype", ...rows.map((e) => e.join(","))].join("\n");
+    const link = document.createElement("a");
+    link.href = encodeURI(csvContent);
+    link.download = "latinotype_history.csv";
+    link.click();
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
@@ -103,7 +102,7 @@ function App() {
             onChange={(e) => setUrls(e.target.value)}
           />
 
-          <div className="flex justify-center gap-4 mb-6">
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
             <button
               onClick={handleScan}
               disabled={loading}
@@ -113,33 +112,7 @@ function App() {
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    ></path>
-                  </svg>
-                  Escaneando...
-                </span>
-              ) : (
-                "🚀 Escanear"
-              )}
+              {loading ? "⏳ Escaneando..." : "🚀 Escanear"}
             </button>
             <button
               onClick={() => {
@@ -151,11 +124,20 @@ function App() {
             >
               🧹 Limpiar
             </button>
+            {history.length > 0 && (
+              <button
+                onClick={exportToCSV}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-5 py-2 rounded-lg shadow-md transition"
+              >
+                ⬇️ Exportar Historial CSV
+              </button>
+            )}
           </div>
 
           {/* Resultados actuales */}
           {results.length > 0 && (
             <div className="overflow-x-auto mb-8">
+              <h2 className="text-lg font-semibold mb-3">📊 Resultados</h2>
               <table className="w-full text-left border-collapse rounded-lg overflow-hidden">
                 <thead className="bg-gray-200 dark:bg-gray-700">
                   <tr>
@@ -177,13 +159,27 @@ function App() {
                       </td>
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">
-                          {renderTags(r.fuentesDetectadas, "gray")}
+                          {r.fuentesDetectadas.map((f, j) => (
+                            <span
+                              key={j}
+                              className="px-3 py-1 text-xs rounded-full bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-gray-100"
+                            >
+                              {f}
+                            </span>
+                          ))}
                         </div>
                       </td>
                       <td className="p-3">
                         {r.latinotype !== "Ninguna" ? (
                           <div className="flex flex-wrap gap-2">
-                            {renderTags(r.latinotype.split(","), "green")}
+                            {r.latinotype.split(",").map((lt, k) => (
+                              <span
+                                key={k}
+                                className="px-3 py-1 text-xs rounded-full bg-green-200 dark:bg-green-600 text-green-900 dark:text-green-100 font-semibold"
+                              >
+                                {lt.trim()}
+                              </span>
+                            ))}
                           </div>
                         ) : (
                           <span className="italic text-gray-500">Ninguna</span>
@@ -199,15 +195,10 @@ function App() {
           {/* Historial */}
           {history.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold mb-3">
-                📜 Historial de escaneos
-              </h2>
+              <h2 className="text-lg font-semibold mb-3">📜 Historial de escaneos</h2>
               <ul className="space-y-3">
                 {history.map((h, idx) => (
-                  <li
-                    key={idx}
-                    className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 shadow"
-                  >
+                  <li key={idx} className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 shadow">
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
                       {h.time}
                     </p>
@@ -230,21 +221,30 @@ function App() {
                               </td>
                               <td className="p-2">
                                 <div className="flex flex-wrap gap-2">
-                                  {renderTags(r.fuentesDetectadas, "gray")}
+                                  {r.fuentesDetectadas.map((f, j) => (
+                                    <span
+                                      key={j}
+                                      className="px-2 py-1 text-xs rounded-full bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-gray-100"
+                                    >
+                                      {f}
+                                    </span>
+                                  ))}
                                 </div>
                               </td>
                               <td className="p-2">
                                 {r.latinotype !== "Ninguna" ? (
                                   <div className="flex flex-wrap gap-2">
-                                    {renderTags(
-                                      r.latinotype.split(","),
-                                      "green"
-                                    )}
+                                    {r.latinotype.split(",").map((lt, k) => (
+                                      <span
+                                        key={k}
+                                        className="px-2 py-1 text-xs rounded-full bg-green-200 dark:bg-green-600 text-green-900 dark:text-green-100 font-semibold"
+                                      >
+                                        {lt.trim()}
+                                      </span>
+                                    ))}
                                   </div>
                                 ) : (
-                                  <span className="italic text-gray-500">
-                                    Ninguna
-                                  </span>
+                                  <span className="italic text-gray-500">Ninguna</span>
                                 )}
                               </td>
                             </tr>
