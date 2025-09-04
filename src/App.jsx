@@ -4,6 +4,7 @@ import API_URL from "./api";
 function App() {
   const [urls, setUrls] = useState("");
   const [results, setResults] = useState([]);
+  const [history, setHistory] = useState([]); // ✅ historial agregado
   const [status, setStatus] = useState("checking");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,6 +30,13 @@ function App() {
 
       const data = await response.json();
       setResults(data.results || []);
+
+      // ✅ Guardar en historial
+      const timestamp = new Date().toLocaleString();
+      setHistory((prev) => [
+        { time: timestamp, results: data.results || [] },
+        ...prev,
+      ]);
     } catch (error) {
       console.error("Error:", error);
       setError("No se pudo conectar con el backend. Intenta nuevamente.");
@@ -37,6 +45,20 @@ function App() {
       setLoading(false);
     }
   };
+
+  // ✅ Función para renderizar chips de fuentes o latinotype
+  const renderTags = (items, color = "gray") =>
+    items
+      .map((i) => i.trim())
+      .filter((i) => i.length > 0)
+      .map((i, idx) => (
+        <span
+          key={idx}
+          className={`px-3 py-1 text-xs rounded-full bg-${color}-200 dark:bg-${color}-600 text-${color}-900 dark:text-${color}-100`}
+        >
+          {i}
+        </span>
+      ));
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
@@ -131,6 +153,7 @@ function App() {
             </button>
           </div>
 
+          {/* Resultados actuales */}
           {results.length > 0 && (
             <div className="overflow-x-auto mb-8">
               <table className="w-full text-left border-collapse rounded-lg overflow-hidden">
@@ -154,27 +177,13 @@ function App() {
                       </td>
                       <td className="p-3">
                         <div className="flex flex-wrap gap-2">
-                          {r.fuentesDetectadas.map((f, j) => (
-                            <span
-                              key={j}
-                              className="px-3 py-1 text-xs rounded-full bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-gray-100"
-                            >
-                              {f}
-                            </span>
-                          ))}
+                          {renderTags(r.fuentesDetectadas, "gray")}
                         </div>
                       </td>
                       <td className="p-3">
                         {r.latinotype !== "Ninguna" ? (
                           <div className="flex flex-wrap gap-2">
-                            {r.latinotype.split(",").map((lt, k) => (
-                              <span
-                                key={k}
-                                className="px-3 py-1 text-xs rounded-full bg-green-200 dark:bg-green-600 text-green-900 dark:text-green-100 font-semibold"
-                              >
-                                {lt.trim()}
-                              </span>
-                            ))}
+                            {renderTags(r.latinotype.split(","), "green")}
                           </div>
                         ) : (
                           <span className="italic text-gray-500">Ninguna</span>
@@ -184,6 +193,68 @@ function App() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Historial */}
+          {history.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold mb-3">
+                📜 Historial de escaneos
+              </h2>
+              <ul className="space-y-3">
+                {history.map((h, idx) => (
+                  <li
+                    key={idx}
+                    className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 shadow"
+                  >
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                      {h.time}
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-sm">
+                        <thead className="bg-gray-200 dark:bg-gray-600">
+                          <tr>
+                            <th className="p-2">URL</th>
+                            <th className="p-2">Fuentes</th>
+                            <th className="p-2">Latinotype</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {h.results.map((r, i) => (
+                            <tr key={i} className="border-t dark:border-gray-500">
+                              <td className="p-2 text-blue-600 underline">
+                                <a href={r.url} target="_blank" rel="noreferrer">
+                                  {r.url}
+                                </a>
+                              </td>
+                              <td className="p-2">
+                                <div className="flex flex-wrap gap-2">
+                                  {renderTags(r.fuentesDetectadas, "gray")}
+                                </div>
+                              </td>
+                              <td className="p-2">
+                                {r.latinotype !== "Ninguna" ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {renderTags(
+                                      r.latinotype.split(","),
+                                      "green"
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="italic text-gray-500">
+                                    Ninguna
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
