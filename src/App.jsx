@@ -8,8 +8,9 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // ✅ Verificar estado del backend con /health
   useEffect(() => {
-    fetch(API_URL)
+    fetch(`${API_URL}/health`)
       .then((res) => setStatus(res.ok ? "up" : "down"))
       .catch(() => setStatus("down"));
   }, []);
